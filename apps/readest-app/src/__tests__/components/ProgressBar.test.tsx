@@ -16,6 +16,8 @@ let currentViewSettings: ViewSettings;
 let currentProgress: BookProgress | null;
 let currentBookData: {
   isFixedLayout: boolean;
+  book?: { format: string };
+  config?: { pdfPageOffset: number | null };
   bookDoc?: {
     metadata?: Record<string, unknown>;
     toc?: TOCItem[];
@@ -118,6 +120,24 @@ const makeProgress = (current: number, total: number): BookProgress =>
     pageinfo: { current, total },
     timeinfo: { section: 0, total: 0 },
   }) as BookProgress;
+
+describe('ProgressBar — calibrated PDF pages', () => {
+  it.each([
+    [0, '-1'],
+    [1, '0'],
+    [2, '1'],
+  ])('shows file page index %s as %s', (index, label) => {
+    currentViewSettings = { ...baseSettings, progressStyle: 'fraction', showProgressInfo: true };
+    currentProgress = makeProgress(Number(index), 10);
+    currentBookData = {
+      isFixedLayout: true,
+      book: { format: 'PDF' },
+      config: { pdfPageOffset: -2 },
+    };
+    const { getByText } = renderProgressBar();
+    expect(getByText(`${label} / 8`)).toBeTruthy();
+  });
+});
 
 describe('ProgressBar — fixed-layout remaining pages', () => {
   it('says "in book" with section-derived count for fixed-layout books', () => {

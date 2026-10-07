@@ -34,9 +34,12 @@ vi.mock('@/store/readerStore', () => ({
 }));
 
 vi.mock('@/store/bookDataStore', () => ({
-  useBookDataStore: () => ({
-    getBookData: () => mocks.state.bookData,
-  }),
+  useBookDataStore: (selector: (s: { getBookData: () => unknown }) => unknown) =>
+    selector({ getBookData: () => mocks.state.bookData }),
+}));
+
+vi.mock('@/store/readerProgressStore', () => ({
+  useBookProgress: () => mocks.state.progress,
 }));
 
 const setup = ({
@@ -45,6 +48,7 @@ const setup = ({
   pageList = undefined as unknown,
   pageItem = undefined as unknown,
   showFraction = false,
+  pdfPageOffset = undefined as number | undefined,
 } = {}) => {
   mocks.state.progress = {
     pageinfo: { current: 93, next: 94, total: 251 },
@@ -52,7 +56,12 @@ const setup = ({
     pageItem,
   };
   mocks.state.viewSettings = { progressStyle };
-  mocks.state.bookData = { isFixedLayout, bookDoc: { pageList } };
+  mocks.state.bookData = {
+    isFixedLayout,
+    bookDoc: { pageList },
+    book: { format: pdfPageOffset === undefined ? 'EPUB' : 'PDF' },
+    config: { pdfPageOffset },
+  };
   const utils = render(<PageJumpInput bookKey='book1' showFraction={showFraction} />);
   const input = utils.getByRole('textbox', { name: 'Go to Page' }) as HTMLInputElement;
   return { ...utils, input };
@@ -66,6 +75,69 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe('PageJumpInput', () => {
+  it('shows calibrated PDF numbering and jumps to its negative cover page', () => {
+    const { input } = setup({ isFixedLayout: true, pdfPageOffset: -2 });
+    expect(input.value).toBe('3 / 28');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '-1 / 28' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(mocks.view.goTo).toHaveBeenCalledWith(0);
+    expect(mocks.view.goToFraction).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [0, 1],
+    [1, 2],
+    [28, 29],
+  ])('jumps from calibrated page %s to PDF index %s', (page, index) => {
+    const { input } = setup({ isFixedLayout: true, pdfPageOffset: -2 });
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: String(page) } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(mocks.view.goTo).toHaveBeenCalledWith(index);
+  });
+
+  it.each([
+    '-2',
+    '29',
+    '1.5',
+    '9007199254740992',
+  ])('does not jump for invalid calibrated page %s', (page) => {
+    const { input } = setup({ isFixedLayout: true, pdfPageOffset: -2 });
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: page } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(mocks.view.goTo).not.toHaveBeenCalled();
+    expect(mocks.view.goToFraction).not.toHaveBeenCalled();
+  });
+
+  it('keeps physical percentage progress while editing calibrated page numbers', () => {
+    const { input } = setup({
+      isFixedLayout: true,
+      pdfPageOffset: -2,
+      progressStyle: 'percentage',
+    });
+    expect(input.value).toBe('17%');
+    fireEvent.focus(input);
+    expect(input.value).toBe('3 / 28');
+    expect(input.inputMode).toBe('text');
+  });
+
+  it('uses explicit zero offset over PDF embedded reference labels', () => {
+    const { input } = setup({
+      isFixedLayout: true,
+      pdfPageOffset: 0,
+      progressStyle: 'reference',
+      pageList: [{ label: '100', href: '4', index: 4 }],
+      pageItem: { label: '100' },
+    });
+    expect(input.value).toBe('5 / 30');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '1' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(mocks.view.goTo).toHaveBeenCalledWith(0);
+  });
+
   it('shows the page fraction as its idle label', () => {
     const { input } = setup();
     expect(input.value).toBe('94 / 251');
