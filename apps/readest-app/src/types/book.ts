@@ -663,6 +663,8 @@ export interface PageboundBookLink {
 
 export interface BookConfig {
   schemaVersion?: number;
+  /** Device-local PDF page-label calibration; null restores the original labels. */
+  pdfPageOffset?: number | null;
   bookHash?: string;
   metaHash?: string;
   progress?: [number, number]; // [current pagenum, total pagenum], 1-based page number
