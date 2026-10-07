@@ -27,6 +27,7 @@ import {
   SettingsSwitchRow,
 } from './primitives';
 import NumberInput from './NumberInput';
+import PDFPageNumbering from './PDFPageNumbering';
 import ColorInput from './theme/ColorInput';
 import { Toggle } from '../primitives/toggle';
 
@@ -947,6 +948,8 @@ const LayoutPanel: React.FC<SettingsPanelPanelProp> = ({ bookKey, onRegisterRese
           />
         )}
       </BoxedList>
+
+      {bookData?.book?.format === 'PDF' && <PDFPageNumbering bookKey={bookKey} />}
 
       {appService?.hasOrientationLock && (
         <BoxedList title={_('Screen')}>
