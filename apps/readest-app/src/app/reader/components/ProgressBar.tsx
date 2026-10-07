@@ -8,6 +8,7 @@ import { useThemeStore } from '@/store/themeStore';
 import { useBookProgress } from '@/store/readerProgressStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useBookDataStore } from '@/store/bookDataStore';
+import { getCalibratedPDFPageInfo } from '@/utils/pdfPageNumbering';
 import {
   formatNumber,
   formatProgress,
@@ -61,11 +62,10 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
   const _ = useTranslation();
   const { appService } = useEnv();
   const isIPhoneDuo = useThemeStore((s) => s.isIPhoneDuo);
-  const getBookData = useBookDataStore((s) => s.getBookData);
+  const bookData = useBookDataStore((s) => s.getBookData(bookKey));
   const getViewSettings = useReaderStore((s) => s.getViewSettings);
   const getView = useReaderStore((s) => s.getView);
   const view = getView(bookKey);
-  const bookData = getBookData(bookKey);
   const viewSettings = getViewSettings(bookKey)!;
   // Reactive: this is the on-screen footer that has to refresh on every
   // page turn. Reads from readerProgressStore only.
@@ -87,6 +87,10 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
   const lang = localStorage?.getItem('i18nextLng') || '';
   const localize = isVertical && lang.toLowerCase().startsWith('zh');
   const pageInfo = bookData?.isFixedLayout ? section : pageinfo;
+  const calibratedInfo = getCalibratedPDFPageInfo(
+    pageInfo,
+    bookData?.book?.format === 'PDF' ? bookData.config?.pdfPageOffset : null,
+  );
   const referenceInfo =
     readingProgressStyle === 'reference'
       ? getReferencePageInfo({
@@ -96,9 +100,11 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
           referencePageCount: viewSettings.referencePageCount,
         })
       : null;
-  const progressInfo = referenceInfo
-    ? `${referenceInfo.current}${isVertical ? ' · ' : ' / '}${referenceInfo.total}`
-    : formatProgress(pageInfo?.current, pageInfo?.total, template, localize, lang);
+  const labelInfo = calibratedInfo ?? referenceInfo;
+  const progressInfo =
+    labelInfo && readingProgressStyle !== 'percentage'
+      ? `${labelInfo.current}${isVertical ? ' · ' : ' / '}${labelInfo.total}`
+      : formatProgress(pageInfo?.current, pageInfo?.total, template, localize, lang);
 
   // Sticky progress bar is horizontal-only; vertical mode keeps its side footer.
   const stickyBarActive = viewSettings.showStickyProgressBar && !isVertical;
@@ -294,8 +300,8 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
       aria-label={[
         progress
           ? _('On {{current}} of {{total}} page', {
-              current: current + 1,
-              total: total,
+              current: calibratedInfo?.current ?? current + 1,
+              total: calibratedInfo?.total ?? total,
             })
           : '',
         ...(showBothRemaining ? [timeAndPagesLeftStr] : [timeLeftStr, pagesLeftStr]),
