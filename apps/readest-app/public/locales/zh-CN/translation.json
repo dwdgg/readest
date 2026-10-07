@@ -2499,5 +2499,14 @@
   "Set Repeat Start (A)": "设置复读起点 (A)",
   "Set Repeat End (B)": "设置复读终点 (B)",
   "Clear A-B Repeat": "清除 A-B 复读",
-  "Pause After Each Sentence": "每句后暂停"
+  "Pause After Each Sentence": "每句后暂停",
+  "Page Number Calibration": "页码校准",
+  "Only this PDF. Negative page numbers and zero are allowed.": "仅作用于当前 PDF，支持负数和 0。",
+  "Choose Page Number or Reference Pages to show calibrated numbering.": "选择“页码”或“参考页码”以显示校准后的编号。",
+  "Set Current Page Number": "将当前页设为",
+  "File page {{current}} of {{total}}": "文件第 {{current}} / {{total}} 页",
+  "Original Page Numbers": "原始页码",
+  "Restore Original Page Numbers": "恢复原始页码",
+  "Failed to save page numbering. Please try again.": "页码保存失败，请重试。",
+  "Enter a whole page number, including negative numbers or zero.": "请输入整数页码，可输入负数或 0。"
 }
