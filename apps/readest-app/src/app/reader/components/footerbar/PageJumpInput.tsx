@@ -3,6 +3,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useReaderStore } from '@/store/readerStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useBookDataStore } from '@/store/bookDataStore';
+import { useBookProgress } from '@/store/readerProgressStore';
+import { getCalibratedPDFPageInfo, getCalibratedPDFPageIndex } from '@/utils/pdfPageNumbering';
 import { formatProgress, getReferencePageInfo } from '@/utils/progress';
 import { clampPage, findReferencePageHref, fractionForPage, parsePageInput } from './pageJump';
 
@@ -22,11 +24,10 @@ interface PageJumpInputProps {
  */
 const PageJumpInput: React.FC<PageJumpInputProps> = ({ bookKey, showFraction, className }) => {
   const _ = useTranslation();
-  const { hoveredBookKey, getView, getProgress, getViewSettings } = useReaderStore();
-  const { getBookData } = useBookDataStore();
+  const { hoveredBookKey, getView, getViewSettings } = useReaderStore();
   const view = getView(bookKey);
-  const bookData = getBookData(bookKey);
-  const progress = getProgress(bookKey);
+  const bookData = useBookDataStore((s) => s.getBookData(bookKey));
+  const progress = useBookProgress(bookKey);
   const viewSettings = getViewSettings(bookKey);
   const progressStyle = viewSettings?.progressStyle || 'percentage';
 
@@ -59,6 +60,8 @@ const PageJumpInput: React.FC<PageJumpInputProps> = ({ bookKey, showFraction, cl
   if (!progressValid) return null;
 
   const progressFraction = (pageInfo.current + 1) / pageInfo.total;
+  const pageOffset = bookData?.book?.format === 'PDF' ? bookData.config?.pdfPageOffset : null;
+  const calibratedInfo = getCalibratedPDFPageInfo(pageInfo, pageOffset);
   const referenceInfo =
     progressStyle === 'reference'
       ? getReferencePageInfo({
@@ -70,15 +73,22 @@ const PageJumpInput: React.FC<PageJumpInputProps> = ({ bookKey, showFraction, cl
       : null;
   const template =
     showFraction || progressStyle === 'fraction' ? '{current} / {total}' : '{percent}%';
-  const displayText = referenceInfo
-    ? `${referenceInfo.current} / ${referenceInfo.total}`
-    : formatProgress(pageInfo.current, pageInfo.total, template, false, 'en', 0);
+  const labelInfo = calibratedInfo ?? referenceInfo;
+  const displayText =
+    labelInfo && (showFraction || progressStyle !== 'percentage')
+      ? `${labelInfo.current} / ${labelInfo.total}`
+      : formatProgress(pageInfo.current, pageInfo.total, template, false, 'en', 0);
 
-  const total = referenceInfo ? referenceInfo.total : pageInfo.total;
-  const currentLabel = referenceInfo ? referenceInfo.current : String(pageInfo.current + 1);
+  const total = labelInfo ? labelInfo.total : pageInfo.total;
+  const currentLabel = labelInfo ? labelInfo.current : String(pageInfo.current + 1);
 
   const jumpToPage = (page: number) => {
     if (!view) return;
+    if (calibratedInfo && typeof pageOffset === 'number') {
+      const index = getCalibratedPDFPageIndex(page, pageInfo.total, pageOffset);
+      if (index !== null) view.goTo(index);
+      return;
+    }
     const target = clampPage(page, total);
     if (referenceInfo) {
       const href = findReferencePageHref(bookData?.bookDoc?.pageList, target);
@@ -97,7 +107,7 @@ const PageJumpInput: React.FC<PageJumpInputProps> = ({ bookKey, showFraction, cl
   };
 
   const commitDraft = () => {
-    const page = parsePageInput(draft);
+    const page = parsePageInput(draft, !!calibratedInfo);
     if (page !== null) jumpToPage(page);
     stopEditing();
   };
@@ -122,7 +132,7 @@ const PageJumpInput: React.FC<PageJumpInputProps> = ({ bookKey, showFraction, cl
       <input
         ref={inputRef}
         type='text'
-        inputMode='numeric'
+        inputMode={calibratedInfo ? 'text' : 'numeric'}
         enterKeyHint='go'
         title={_('Go to Page')}
         aria-label={_('Go to Page')}

@@ -9,11 +9,11 @@ export interface PageListItem {
  * "94 / 251" shape while the page portion is typed over, so a trailing
  * "/ total" is accepted and ignored.
  */
-export function parsePageInput(text: string): number | null {
-  const match = text.match(/^\s*(\d+)\s*(?:\/\s*\d*\s*)?$/);
+export function parsePageInput(text: string, allowSigned: boolean = false): number | null {
+  const match = text.match(/^\s*([+-]?\d+)\s*(?:\/\s*[+-]?\d*\s*)?$/);
   if (!match) return null;
   const page = parseInt(match[1]!, 10);
-  return page > 0 ? page : null;
+  return Number.isSafeInteger(page) && (allowSigned || page > 0) ? page : null;
 }
 
 export function clampPage(page: number, total: number): number {
