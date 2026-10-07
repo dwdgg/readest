@@ -2499,5 +2499,14 @@
   "Set Repeat Start (A)": "設定複讀起點 (A)",
   "Set Repeat End (B)": "設定複讀終點 (B)",
   "Clear A-B Repeat": "清除 A-B 複讀",
-  "Pause After Each Sentence": "每句後暫停"
+  "Pause After Each Sentence": "每句後暫停",
+  "Page Number Calibration": "頁碼校準",
+  "Only this PDF. Negative page numbers and zero are allowed.": "僅作用於目前 PDF，支援負數和 0。",
+  "Choose Page Number or Reference Pages to show calibrated numbering.": "選擇「頁碼」或「參考頁碼」以顯示校準後的編號。",
+  "Set Current Page Number": "將目前頁設為",
+  "File page {{current}} of {{total}}": "檔案第 {{current}} / {{total}} 頁",
+  "Original Page Numbers": "原始頁碼",
+  "Restore Original Page Numbers": "恢復原始頁碼",
+  "Failed to save page numbering. Please try again.": "頁碼儲存失敗，請重試。",
+  "Enter a whole page number, including negative numbers or zero.": "請輸入整數頁碼，可輸入負數或 0。"
 }
