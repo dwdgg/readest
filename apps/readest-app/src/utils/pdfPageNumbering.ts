@@ -1,8 +1,8 @@
-import type { PageInfo } from '@/types/book';
+import type { BookConfig, PageInfo } from '@/types/book';
 import type { ReferencePageInfo } from '@/utils/progress';
 
-/** Display labels only. Reading progress and PDF destinations stay physical. */
-export function getCalibratedPDFPageInfo(
+/** Display labels only. Reading progress and original destinations stay physical. */
+export function getCalibratedPageInfo(
   pageInfo: PageInfo | undefined,
   offset: number | null | undefined,
 ): ReferencePageInfo | null {
@@ -14,12 +14,20 @@ export function getCalibratedPDFPageInfo(
   };
 }
 
-/** Resolve a calibrated label to an exact zero-based PDF destination. */
-export function getCalibratedPDFPageIndex(
-  page: number,
-  total: number,
-  offset: number,
-): number | null {
+/** Resolve a calibrated label to an zero-based reader page index. */
+export function getCalibratedPageIndex(page: number, total: number, offset: number): number | null {
   const index = page - offset - 1;
   return Number.isSafeInteger(index) && index >= 0 && index < total ? index : null;
+}
+
+/** Keep calibration saved by the original PDF-only version. */
+export function getPageNumberOffset(
+  config: BookConfig | null | undefined,
+  format?: string,
+): number | null | undefined {
+  return config?.pageNumberOffset !== undefined
+    ? config.pageNumberOffset
+    : format === 'PDF'
+      ? config?.pdfPageOffset
+      : undefined;
 }
