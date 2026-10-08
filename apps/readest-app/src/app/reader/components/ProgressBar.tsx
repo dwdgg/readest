@@ -8,7 +8,7 @@ import { useThemeStore } from '@/store/themeStore';
 import { useBookProgress } from '@/store/readerProgressStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useBookDataStore } from '@/store/bookDataStore';
-import { getCalibratedPDFPageInfo } from '@/utils/pdfPageNumbering';
+import { getPageNumberOffset, getCalibratedPageInfo } from '@/utils/pdfPageNumbering';
 import {
   formatNumber,
   formatProgress,
@@ -87,9 +87,9 @@ const ProgressBar: React.FC<ProgressBarProps> = ({
   const lang = localStorage?.getItem('i18nextLng') || '';
   const localize = isVertical && lang.toLowerCase().startsWith('zh');
   const pageInfo = bookData?.isFixedLayout ? section : pageinfo;
-  const calibratedInfo = getCalibratedPDFPageInfo(
+  const calibratedInfo = getCalibratedPageInfo(
     pageInfo,
-    bookData?.book?.format === 'PDF' ? bookData.config?.pdfPageOffset : null,
+    getPageNumberOffset(bookData?.config, bookData?.book?.format),
   );
   const referenceInfo =
     readingProgressStyle === 'reference'
