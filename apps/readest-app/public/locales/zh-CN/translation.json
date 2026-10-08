@@ -2508,5 +2508,8 @@
   "Original Page Numbers": "原始页码",
   "Restore Original Page Numbers": "恢复原始页码",
   "Failed to save page numbering. Please try again.": "页码保存失败，请重试。",
-  "Enter a whole page number, including negative numbers or zero.": "请输入整数页码，可输入负数或 0。"
+  "Enter a whole page number, including negative numbers or zero.": "请输入整数页码，可输入负数或 0。",
+  "Only this book. Negative page numbers and zero are allowed.": "仅对此书生效，允许负页码和零。",
+  "Text books use reader pagination. Recalibrate if layout changes affect numbering.": "文字书籍按阅读器分页校准。如果排版变化影响页码，请重新校准。",
+  "Reader page {{current}} of {{total}}": "阅读器第 {{current}} 页，共 {{total}} 页"
 }
