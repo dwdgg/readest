@@ -5,6 +5,7 @@ import { useBookDataStore } from '@/store/bookDataStore';
 import { useBookProgress } from '@/store/readerProgressStore';
 import { useSettingsStore } from '@/store/settingsStore';
 import { parsePageInput } from '@/app/reader/components/footerbar/pageJump';
+import { getPageNumberOffset } from '@/utils/pdfPageNumbering';
 import { BoxedList, SettingsRow } from './primitives';
 
 const PDFPageNumbering: React.FC<{ bookKey: string }> = ({ bookKey }) => {
@@ -13,9 +14,10 @@ const PDFPageNumbering: React.FC<{ bookKey: string }> = ({ bookKey }) => {
   const settings = useSettingsStore((s) => s.settings);
   const bookData = useBookDataStore((s) => s.getBookData(bookKey));
   const progress = useBookProgress(bookKey);
-  const offset = bookData?.config?.pdfPageOffset;
-  const current = progress?.section.current;
-  const total = progress?.section.total;
+  const offset = getPageNumberOffset(bookData?.config, bookData?.book?.format);
+  const pageInfo = bookData?.isFixedLayout ? progress?.section : progress?.pageinfo;
+  const current = pageInfo?.current;
+  const total = pageInfo?.total;
   const [draft, setDraft] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -24,18 +26,18 @@ const PDFPageNumbering: React.FC<{ bookKey: string }> = ({ bookKey }) => {
     setDraft(current === undefined ? '' : String(current + 1 + (offset ?? 0)));
   }, [bookKey, current, offset]);
 
-  if (bookData?.book?.format !== 'PDF' || current === undefined || !total) return null;
+  if (current === undefined || !total) return null;
 
   const saveOffset = async (nextOffset: number | null) => {
     const store = useBookDataStore.getState();
     setSaving(true);
     setError('');
-    store.setConfig(bookKey, { pdfPageOffset: nextOffset });
+    store.setConfig(bookKey, { pageNumberOffset: nextOffset });
     try {
       const config = store.getConfig(bookKey);
       if (config) await store.saveConfig(envConfig, bookKey, config, settings);
     } catch {
-      store.setConfig(bookKey, { pdfPageOffset: offset });
+      store.setConfig(bookKey, { pageNumberOffset: bookData?.config?.pageNumberOffset });
       setError(_('Failed to save page numbering. Please try again.'));
     } finally {
       setSaving(false);
@@ -58,15 +60,19 @@ const PDFPageNumbering: React.FC<{ bookKey: string }> = ({ bookKey }) => {
       title={_('Page Number Calibration')}
       description={
         <>
-          {_('Only this PDF. Negative page numbers and zero are allowed.')}{' '}
+          {_('Only this book. Negative page numbers and zero are allowed.')}{' '}
+          {!bookData?.isFixedLayout &&
+            _(
+              'Text books use reader pagination. Recalibrate if layout changes affect numbering.',
+            )}{' '}
           {_('Choose Page Number or Reference Pages to show calibrated numbering.')}
         </>
       }
-      data-setting-id='settings.layout.pdfPageNumbering'
+      data-setting-id='settings.layout.pageNumbering'
     >
       <SettingsRow
         label={_('Set Current Page Number')}
-        description={_('File page {{current}} of {{total}}', { current: current + 1, total })}
+        description={_('Reader page {{current}} of {{total}}', { current: current + 1, total })}
       >
         <form
           onSubmit={apply}
