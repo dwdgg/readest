@@ -4,7 +4,11 @@ import { useReaderStore } from '@/store/readerStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useBookDataStore } from '@/store/bookDataStore';
 import { useBookProgress } from '@/store/readerProgressStore';
-import { getCalibratedPDFPageInfo, getCalibratedPDFPageIndex } from '@/utils/pdfPageNumbering';
+import {
+  getPageNumberOffset,
+  getCalibratedPageInfo,
+  getCalibratedPageIndex,
+} from '@/utils/pdfPageNumbering';
 import { formatProgress, getReferencePageInfo } from '@/utils/progress';
 import { clampPage, findReferencePageHref, fractionForPage, parsePageInput } from './pageJump';
 
@@ -60,8 +64,8 @@ const PageJumpInput: React.FC<PageJumpInputProps> = ({ bookKey, showFraction, cl
   if (!progressValid) return null;
 
   const progressFraction = (pageInfo.current + 1) / pageInfo.total;
-  const pageOffset = bookData?.book?.format === 'PDF' ? bookData.config?.pdfPageOffset : null;
-  const calibratedInfo = getCalibratedPDFPageInfo(pageInfo, pageOffset);
+  const pageOffset = getPageNumberOffset(bookData?.config, bookData?.book?.format);
+  const calibratedInfo = getCalibratedPageInfo(pageInfo, pageOffset);
   const referenceInfo =
     progressStyle === 'reference'
       ? getReferencePageInfo({
@@ -85,8 +89,11 @@ const PageJumpInput: React.FC<PageJumpInputProps> = ({ bookKey, showFraction, cl
   const jumpToPage = (page: number) => {
     if (!view) return;
     if (calibratedInfo && typeof pageOffset === 'number') {
-      const index = getCalibratedPDFPageIndex(page, pageInfo.total, pageOffset);
-      if (index !== null) view.goTo(index);
+      const index = getCalibratedPageIndex(page, pageInfo.total, pageOffset);
+      if (index !== null) {
+        if (bookData?.isFixedLayout) view.goTo(index);
+        else view.goToFraction(fractionForPage(index + 1, pageInfo.total));
+      }
       return;
     }
     const target = clampPage(page, total);
