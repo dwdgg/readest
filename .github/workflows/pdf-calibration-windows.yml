@@ -1,4 +1,4 @@
-name: Build PDF Calibration Windows
+name: Build Page Calibration Windows
 
 on:
   workflow_dispatch:
@@ -37,7 +37,7 @@ jobs:
         run: pnpm --filter @readest/readest-app setup-vendors
       - name: Check types and lint
         run: pnpm lint
-      - name: Test PDF page calibration
+      - name: Test page calibration
         run: pnpm --filter @readest/readest-app test --run src/__tests__/components/page-jump-input.test.tsx src/__tests__/components/settings/PDFPageNumbering.test.tsx src/__tests__/components/ProgressBar.test.tsx --maxWorkers=4
       - name: Configure independent test build
         run: node apps/readest-app/scripts/prepare-pdf-calibration-build.mjs
@@ -49,18 +49,19 @@ jobs:
           projectPath: apps/readest-app
           tauriScript: pnpm tauri
           args: --target x86_64-pc-windows-msvc --bundles nsis
-          tagName: pdf-calibration-v__VERSION__
-          releaseName: Readest PDF Calibration __VERSION__ (Windows x64)
+          tagName: page-calibration-v__VERSION__
+          releaseName: Readest Page Calibration __VERSION__ (Windows x64)
           releaseDraft: false
           prerelease: true
-          includeUpdaterJson: false
+          uploadUpdaterJson: false
           releaseBody: |
-            非官方 PDF 页码校准测试版，基于 Readest 0.12.12。
+            非官方通用页码校准测试版，基于 Readest 0.12.12。
 
             下载 Assets 中的 setup.exe 安装程序。支持负页码、零页码、校准后跳页、本地保存和重置。
-            在 PDF 正文第一页打开“设置 → 布局”，选择页码显示，将当前页码设为 1 并应用。
+            在书籍正文第一页打开“设置 → 布局”，选择页码显示，将当前页码设为 1 并应用。
 
-            与官方版使用不同的应用标识和安装名称，默认书库独立；请重新导入 PDF。
+            与官方版使用不同的应用标识和安装名称，默认书库独立；请重新导入书籍。
             自动更新关闭。本安装包未做 Windows 代码签名，系统可能显示发布者未知提示。
-            校准只改变页码显示和跳转，不修改 PDF 文件；目录、缩略图及批注页码暂未校准。
+            校准只改变页码显示和跳转，不修改书籍文件；目录、缩略图及批注页码暂未校准。
+            支持阅读器各格式；文字书籍按阅读器分页校准，排版变化影响页码时需要重新校准。
             完整对应源码见本发布标签；保留原项目 AGPL-3.0-or-later 许可证及版权声明。
