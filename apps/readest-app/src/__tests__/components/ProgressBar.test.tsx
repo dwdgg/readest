@@ -17,7 +17,7 @@ let currentProgress: BookProgress | null;
 let currentBookData: {
   isFixedLayout: boolean;
   book?: { format: string };
-  config?: { pdfPageOffset: number | null };
+  config?: { pdfPageOffset?: number | null; pageNumberOffset?: number | null };
   bookDoc?: {
     metadata?: Record<string, unknown>;
     toc?: TOCItem[];
@@ -122,6 +122,17 @@ const makeProgress = (current: number, total: number): BookProgress =>
   }) as BookProgress;
 
 describe('ProgressBar — calibrated PDF pages', () => {
+  it('shows calibrated text-book numbering using whole-book progress', () => {
+    currentViewSettings = { ...baseSettings, progressStyle: 'fraction', showProgressInfo: true };
+    currentProgress = makeProgress(2, 100);
+    currentProgress.section = { current: 0, total: 5 };
+    currentBookData = {
+      isFixedLayout: false,
+      book: { format: 'EPUB' },
+      config: { pageNumberOffset: -2 },
+    };
+    expect(renderProgressBar().getByText('1 / 98')).toBeTruthy();
+  });
   it.each([
     [0, '-1'],
     [1, '0'],

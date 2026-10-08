@@ -49,6 +49,7 @@ const setup = ({
   pageItem = undefined as unknown,
   showFraction = false,
   pdfPageOffset = undefined as number | undefined,
+  pageNumberOffset = undefined as number | undefined,
 } = {}) => {
   mocks.state.progress = {
     pageinfo: { current: 93, next: 94, total: 251 },
@@ -60,7 +61,7 @@ const setup = ({
     isFixedLayout,
     bookDoc: { pageList },
     book: { format: pdfPageOffset === undefined ? 'EPUB' : 'PDF' },
-    config: { pdfPageOffset },
+    config: { pdfPageOffset, pageNumberOffset },
   };
   const utils = render(<PageJumpInput bookKey='book1' showFraction={showFraction} />);
   const input = utils.getByRole('textbox', { name: 'Go to Page' }) as HTMLInputElement;
@@ -75,6 +76,27 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe('PageJumpInput', () => {
+  it('uses calibrated EPUB labels and resolves negative pages through reader fractions', () => {
+    const { input } = setup({
+      pageNumberOffset: -95,
+      progressStyle: 'reference',
+      pageList: [{ label: '1', href: 'chapter.xhtml' }],
+    });
+    expect(input.value).toBe('-1 / 156');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '-94' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(mocks.view.goToFraction.mock.calls[0]?.[0]).toBeCloseTo(0.5 / 251);
+    expect(mocks.view.goTo).not.toHaveBeenCalled();
+  });
+  it('uses generic calibration for fixed-layout books', () => {
+    const { input } = setup({ isFixedLayout: true, pageNumberOffset: -2 });
+    expect(input.value).toBe('3 / 28');
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '0' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(mocks.view.goTo).toHaveBeenCalledWith(1);
+  });
   it('shows calibrated PDF numbering and jumps to its negative cover page', () => {
     const { input } = setup({ isFixedLayout: true, pdfPageOffset: -2 });
     expect(input.value).toBe('3 / 28');
