@@ -67,6 +67,45 @@ afterEach(async () => {
 });
 
 describe('PDF page number calibration', () => {
+  it('loads the previous PDF calibration and resets it without falling back to legacy values', async () => {
+    useBookDataStore.getState().setConfig('pdfbook', { pdfPageOffset: -2 });
+    const { getByRole } = render(<PDFPageNumbering bookKey='pdfbook' />);
+    expect((getByRole('textbox') as HTMLInputElement).value).toBe('1');
+    fireEvent.click(getByRole('button', { name: 'Restore Original Page Numbers' }));
+    await waitFor(() => expect(io.saveBookConfig).toHaveBeenCalledTimes(1));
+    expect((getByRole('textbox') as HTMLInputElement).value).toBe('3');
+    expect(io.saveBookConfig.mock.calls[0]?.[1]).toMatchObject({
+      pageNumberOffset: null,
+      pdfPageOffset: -2,
+    });
+  });
+
+  it.each([
+    'EPUB',
+    'TXT',
+    'MOBI',
+    'CBZ',
+  ] as const)('calibrates %s using its reader page count', async (format) => {
+    const data = useBookDataStore.getState().getBookData('pdfbook')!;
+    useBookDataStore.setState({
+      booksData: {
+        pdfbook: { ...data, book: { ...book, format }, isFixedLayout: format === 'CBZ' },
+      },
+    });
+    setBookProgress('pdfbook', {
+      section: { current: 2, total: 10 },
+      pageinfo: { current: 9, next: 10, total: 100 },
+    } as BookProgress);
+    const { getByRole } = render(<PDFPageNumbering bookKey='pdfbook' />);
+    expect((getByRole('textbox') as HTMLInputElement).value).toBe(format === 'CBZ' ? '3' : '10');
+    fireEvent.change(getByRole('textbox'), { target: { value: '1' } });
+    fireEvent.click(getByRole('button', { name: 'Apply' }));
+    await waitFor(() => expect(io.saveBookConfig).toHaveBeenCalledTimes(1));
+    expect(io.saveBookConfig.mock.calls[0]?.[1]).toMatchObject({
+      pageNumberOffset: format === 'CBZ' ? -2 : -9,
+    });
+  });
+
   it('lets the reader set the current body page to 1 and saves without turning a page', async () => {
     const { getByRole } = render(<PDFPageNumbering bookKey='pdfbook' />);
     const input = getByRole('textbox', { name: 'Set Current Page Number' });
@@ -74,11 +113,11 @@ describe('PDF page number calibration', () => {
     fireEvent.click(getByRole('button', { name: 'Apply' }));
     await waitFor(() => expect(io.saveBookConfig).toHaveBeenCalledTimes(1));
     expect(useBookDataStore.getState().getConfig('pdfbook')).toMatchObject({
-      pdfPageOffset: -2,
+      pageNumberOffset: -2,
       progress: [3, 10],
       location: 'original-location',
     });
-    expect(io.saveBookConfig.mock.calls[0]?.[1]).toMatchObject({ pdfPageOffset: -2 });
+    expect(io.saveBookConfig.mock.calls[0]?.[1]).toMatchObject({ pageNumberOffset: -2 });
   });
 
   it('retains the calibration through serialization and reopening, and persists reset', async () => {
@@ -107,7 +146,7 @@ describe('PDF page number calibration', () => {
       DEFAULT_BOOK_SEARCH_CONFIG,
     );
     expect(
-      deserializeConfig(resetSaved, globalSettings, DEFAULT_BOOK_SEARCH_CONFIG).pdfPageOffset,
+      deserializeConfig(resetSaved, globalSettings, DEFAULT_BOOK_SEARCH_CONFIG).pageNumberOffset,
     ).toBeNull();
     expect((reopened.getByRole('textbox') as HTMLInputElement).value).toBe('3');
   });
@@ -117,7 +156,9 @@ describe('PDF page number calibration', () => {
     fireEvent.change(getByRole('textbox'), { target: { value: label } });
     fireEvent.click(getByRole('button', { name: 'Apply' }));
     await waitFor(() => expect(io.saveBookConfig).toHaveBeenCalledTimes(1));
-    expect(useBookDataStore.getState().getConfig('pdfbook')?.pdfPageOffset).toBe(Number(label) - 3);
+    expect(useBookDataStore.getState().getConfig('pdfbook')?.pageNumberOffset).toBe(
+      Number(label) - 3,
+    );
   });
 
   it('rejects decimals and does not save them', () => {
@@ -134,6 +175,6 @@ describe('PDF page number calibration', () => {
     fireEvent.change(getByRole('textbox'), { target: { value: '1' } });
     fireEvent.click(getByRole('button', { name: 'Apply' }));
     await waitFor(() => expect(getByRole('alert').textContent).toContain('Failed to save'));
-    expect(useBookDataStore.getState().getConfig('pdfbook')?.pdfPageOffset).toBeUndefined();
+    expect(useBookDataStore.getState().getConfig('pdfbook')?.pageNumberOffset).toBeUndefined();
   });
 });
